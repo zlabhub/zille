@@ -1,10 +1,10 @@
+import mitt from 'mitt';
 import { LocationProps, LocationRecord } from "./types"
-import mitt, { Emitter } from 'mitt';
 import { parse } from 'qs';
 import { Controller, ControllerMetadata } from "./controller";
 import { Meta } from "./meta";
-import { MIDDLEWARE, POPSTATE, _middleware, _render, Newable } from './types';
-import { createRouter, RouterContext, addRoute as addRouter, findRoute, removeRoute } from 'rou3';
+import { MIDDLEWARE, POPSTATE, _middleware, _render, Newable, WindowContextProps } from './types';
+import { createRouter, addRoute as addRouter, findRoute, removeRoute } from 'rou3';
 import {
   createContext,
   createElement,
@@ -23,19 +23,7 @@ import {
 
 type IMiddle = { component: FC<any>, props: any };
 
-const WindowContext: {
-  baseURL: string,
-  eager?: boolean,
-  router: RouterContext<{ payload: (() => Promise<{ new(): Controller }>) | { new(): Controller }, expression: string }>,
-  event: Emitter<{ location: undefined }>,
-  defaultLocation: LocationProps<string, string>,
-  globalMiddlewares: FC<any>[],
-  routerMiddlewares: FC<any>[],
-  controllerMiddlewares: Map<string, FC<any>[]>,
-  controllerCaches: Map<string, FC<any>>,
-  routes: Set<() => void>,
-  controllerMetadatas: Map<Newable, ControllerMetadata<any, any>>,
-} = {
+const WindowContext: WindowContextProps = {
   baseURL: '/',
   eager: false,
   event: mitt(),

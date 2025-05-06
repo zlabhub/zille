@@ -1,3 +1,9 @@
+export interface ZilleVitePluginCodeOptions {
+  eager?: boolean,
+  directory?: string,
+  controllerSuffix?: string,
+  controllerMetaSuffix?: string,
+}
 /**
  * 生成注入代码
  * @param options 
@@ -6,12 +12,7 @@
  * @param options.suffix 后缀 default: .controller.tsx
  * @returns 
  */
-export function makeInjectionCode(options: {
-  eager?: boolean,
-  directory?: string,
-  controllerSuffix?: string,
-  controllerMetaSuffix?: string,
-} = {}) {
+export function makeInjectionCode(options: ZilleVitePluginCodeOptions = {}) {
   const {
     eager = false,
     directory = 'controllers',

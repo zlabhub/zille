@@ -1,12 +1,11 @@
 import type { PluginOption } from 'vite';
-import { makeInjectionCode } from './code';
+import { makeInjectionCode, ZilleVitePluginCodeOptions } from './code';
 
-export function createZilleVitePlugin(options: {
-  directory?: string,
-  suffix?: string,
-  eager?: boolean,
+export interface ZilleVitePluginOptions extends ZilleVitePluginCodeOptions {
   entry?: string,
-} = {}): PluginOption {
+}
+
+export function createZilleVitePlugin(options: ZilleVitePluginOptions = {}): PluginOption {
   const { entry = 'src/main.tsx', ...rest } = options;
   const syscode = makeInjectionCode(rest);
   return {
