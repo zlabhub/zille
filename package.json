@@ -13,6 +13,7 @@
     "init": "pnpm i --registry=https://registry.npmmirror.com/",
     "update": "pnpm update --registry=https://registry.npmmirror.com/",
     "build": "pnpm -r run build",
+    "changes": "pnpm changeset",
     "publish": "npm run build && pnpm changeset publish",
     "new": "node scripts/new.mjs -trace-warnings",
     "add": "node scripts/install.mjs -trace-warnings",
