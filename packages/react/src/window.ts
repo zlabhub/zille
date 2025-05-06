@@ -1,9 +1,9 @@
-import { LocationProps } from "./types"
+import { LocationProps, LocationRecord } from "./types"
 import mitt, { Emitter } from 'mitt';
 import { parse } from 'qs';
-import { Controller } from "./controller";
+import { Controller, ControllerMetadata } from "./controller";
 import { Meta } from "./meta";
-import { MIDDLEWARE, POPSTATE, _middleware, _render } from './types';
+import { MIDDLEWARE, POPSTATE, _middleware, _render, Newable } from './types';
 import { createRouter, RouterContext, addRoute as addRouter, findRoute, removeRoute } from 'rou3';
 import {
   createContext,
@@ -34,10 +34,12 @@ const WindowContext: {
   controllerMiddlewares: Map<string, FC<any>[]>,
   controllerCaches: Map<string, FC<any>>,
   routes: Set<() => void>,
+  controllerMetadatas: Map<Newable, ControllerMetadata<any, any>>,
 } = {
   baseURL: '/',
   eager: false,
   event: mitt(),
+  controllerMetadatas: new Map(),
   routes: new Set(),
   globalMiddlewares: [],
   routerMiddlewares: [],
@@ -53,12 +55,14 @@ const WindowContext: {
 }
 
 const WindowContextProvider = createContext<LocationProps<string, string> & {
-  redirect: (url: string, type?: POPSTATE) => void,
+  redirect: (url?: string, type?: POPSTATE) => void,
   useEffect: typeof useEffect,
+  metaId: string | null,
 }>({
   ...WindowContext.defaultLocation,
   redirect: () => { },
   useEffect: () => { },
+  metaId: null,
 });
 
 function getWindowLocationPathname() {
@@ -80,7 +84,7 @@ function getWindowLocationHash() {
 function getWindowLocationQuery() {
   return parse(window.location.search, {
     ignoreQueryPrefix: true,
-  }) as Partial<Record<string, string>>;
+  }) as Partial<LocationRecord<string>>;
 }
 
 export function setWindowBaseURL(baseURL: string = '/') {
@@ -94,8 +98,26 @@ export function setWindowEager(eager: boolean) {
   WindowContext.eager = eager;
 }
 
+export function getWindowEager() {
+  return WindowContext.eager;
+}
+
 export function useLocation() {
   return useContext(WindowContextProvider);
+}
+
+export function addControllerMetadata<T extends ControllerMetadata>(clazz: Newable<T>, data: T) {
+  WindowContext.controllerMetadatas.set(clazz, data);
+}
+
+export function getControllerMetadata<
+  P extends string,
+  Q extends string,
+  T extends ControllerMetadata<P, Q>,
+>(clazz: Newable<T>): T | undefined {
+  if (WindowContext.controllerMetadatas.has(clazz)) {
+    return WindowContext.controllerMetadatas.get(clazz)! as T;
+  }
 }
 
 export function addMiddleware<P>(type: MIDDLEWARE, middleware: FC<P>) {
@@ -135,22 +157,25 @@ export function WindowProvider(props: PropsWithChildren<{
   const [isPending, startTransition] = useTransition();
   const [pathname, setPathname] = useState(WindowContext.defaultLocation.pathname);
   const [hash, setHash] = useState(WindowContext.defaultLocation.hash);
-  const [query, setQuery] = useState<Partial<Record<string, string>>>(WindowContext.defaultLocation.query);
-  const [params, setParams] = useState<Partial<Record<string, string>>>({});
+  const [query, setQuery] = useState<Partial<LocationRecord<string>>>(WindowContext.defaultLocation.query);
+  const [params, setParams] = useState<Partial<LocationRecord<string>>>(WindowContext.defaultLocation.params);
+  const [metaId, setMetaId] = useState<string | null>(null);
   const [node, setNode] = useState<ReactNode>();
   const [middlewares, setMiddlewares] = useState<IMiddle[]>([]);
 
-  const redirect = useCallback((url: string, type: POPSTATE = POPSTATE.PUSH) => {
-    if (!url.startsWith(WindowContext.baseURL)) {
-      const _url = url.startsWith('/') ? url.substring(1) : url;
-      url = WindowContext.baseURL + _url;
+  const redirect = useCallback((url?: string, type: POPSTATE = POPSTATE.PUSH) => {
+    if (url) {
+      if (!url.startsWith(WindowContext.baseURL)) {
+        const _url = url.startsWith('/') ? url.substring(1) : url;
+        url = WindowContext.baseURL + _url;
+      }
+      if (type === POPSTATE.PUSH) {
+        window.history.pushState({}, '', url);
+      } else {
+        window.history.replaceState({}, '', url);
+      }
+      WindowContext.event.emit('location');
     }
-    if (type === POPSTATE.PUSH) {
-      window.history.pushState({}, '', url);
-    } else {
-      window.history.replaceState({}, '', url);
-    }
-    WindowContext.event.emit('location');
   }, [])
 
   const useContextEffect: typeof useEffect = (fn, deps) => useEffect(() => {
@@ -164,10 +189,13 @@ export function WindowProvider(props: PropsWithChildren<{
     const handler = () => {
       const pathname = getWindowLocationPathname();
       const matched = findRoute(WindowContext.router, 'GET', pathname, { params: true });
-      let _params: Partial<Record<string, string>> = matched?.params ?? {};
+      let _params: Partial<LocationRecord<string>> = matched?.params ?? {};
+      let _middlewares: IMiddle[] = [];
+      let _node: ReactNode = null;
+      let expression: string | null = null;
       if (matched) {
         const handler = matched.data.payload;
-        const expression = matched.data.expression;
+        expression = matched.data.expression;
         if (!WindowContext.controllerCaches.has(expression)) {
           if (WindowContext.eager) {
             // 直接 controller 模式
@@ -191,8 +219,8 @@ export function WindowProvider(props: PropsWithChildren<{
                 )
               }
               newComponent.isLazy = true;
-              WindowContext.controllerMiddlewares.set(expression, middlewares);
-              WindowContext.controllerCaches.set(expression, component);
+              WindowContext.controllerMiddlewares.set(expression!, middlewares);
+              WindowContext.controllerCaches.set(expression!, component);
               return { default: newComponent };
             })
             WindowContext.controllerCaches.set(expression, Comp);
@@ -200,7 +228,7 @@ export function WindowProvider(props: PropsWithChildren<{
         }
         const component = WindowContext.controllerCaches.get(expression)!;
         const middlewares = WindowContext.controllerMiddlewares.get(expression) ?? [];
-        const _middlewares: IMiddle[] = [
+        _middlewares = [
           ...WindowContext.globalMiddlewares,
           ...WindowContext.routerMiddlewares,
           ...middlewares,
@@ -210,11 +238,11 @@ export function WindowProvider(props: PropsWithChildren<{
           _middlewares.push({ component: Suspense, props: { fallback: props.fallback } })
         }
         _middlewares.push({ component, props: {} });
-        setMiddlewares(_middlewares.reverse());
-        setNode(null);
+        _middlewares = _middlewares.reverse();
+        _node = null;
       } else {
-        setMiddlewares([...WindowContext.globalMiddlewares].map(component => ({ component, props: {} })).reverse());
-        setNode(props.children);
+        _middlewares = [...WindowContext.globalMiddlewares].map(component => ({ component, props: {} })).reverse();
+        _node = props.children;
       }
 
       startTransition(() => {
@@ -222,6 +250,9 @@ export function WindowProvider(props: PropsWithChildren<{
         setHash(getWindowLocationHash());
         setQuery(getWindowLocationQuery());
         setParams(_params);
+        setMiddlewares(_middlewares);
+        setNode(_node);
+        setMetaId(expression);
       })
     }
 
@@ -241,7 +272,7 @@ export function WindowProvider(props: PropsWithChildren<{
       component: WindowContextProvider.Provider,
       props: {
         value: {
-          pathname, query, params, hash, redirect,
+          metaId, pathname, query, params, hash, redirect,
           useEffect: useContextEffect,
         }
       }
