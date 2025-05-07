@@ -44,8 +44,6 @@ export class Fetcher {
           'content-type': 'application/json',
         };
         break;
-      default:
-        return Promise.reject(new Exception(405, 'Method not allowed'));
     }
 
     return window.fetch(options.url, configs)
