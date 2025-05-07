@@ -60,8 +60,19 @@ const services = import.meta.glob('./${directory}/**/*.service.ts', {
   import: 'default',
 });
 Object.entries(services).forEach(([path, fn]) => {
-  const sp = path.split('/');
-  const name = sp[sp.length - 1].slice(0, '.service.ts'.length * -1);
-  service[name] = new fn();
+  const url = path.slice('./${directory}'.length + 1, '.service.ts'.length * -1).replace(/\\/index$/, '') || '';
+  const sp = url.split('/');
+  let target = service;
+  for (let i = 0; i < sp.length; i++) {
+    const name = sp[i];
+    if (i === sp.length - 1) {
+      target[name] = new fn();
+    } else {
+      if (!target[name]) {
+        target[name] = {};
+      }
+      target = target[name];
+    }
+  }
 });`
 }
