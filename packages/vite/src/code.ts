@@ -59,7 +59,7 @@ const services = import.meta.glob('./${directory}/**/*.service.ts', {
   eager: true,
   import: 'default',
 });
-Object.entries(controllers).forEach(([path, fn]) => {
+Object.entries(services).forEach(([path, fn]) => {
   const sp = path.split('/');
   const name = sp[sp.length - 1].slice(0, '.service.ts'.length * -1);
   service[name] = new fn();
