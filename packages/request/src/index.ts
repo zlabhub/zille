@@ -20,6 +20,9 @@ export * from './fetcher';
 
 const RequestListeners = new Map<string | number, FC>();
 
+export interface RequestService { }
+export const service: RequestService = {}
+
 export function useSubmit<U extends any[], T>(fn: (...args: U) => Promise<T>) {
   const [loading, setLoading] = useState(false);
   const { post } = useRequestContext();

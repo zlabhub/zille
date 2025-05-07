@@ -3,6 +3,8 @@ export interface ZilleVitePluginCodeOptions {
   directory?: string,
   controllerSuffix?: string,
   controllerMetaSuffix?: string,
+  service?: boolean,
+  serviceDirectory?: string,
 }
 /**
  * 生成注入代码
@@ -11,6 +13,8 @@ export interface ZilleVitePluginCodeOptions {
  * @param options.directory 目录 default: controllers
  * @param options.controllerSuffix 控制器后缀 default: .controller.tsx
  * @param options.controllerMetaSuffix 控制器元数据后缀 default: .meta.ts
+ * @param options.service 是否生成服务 default: false
+ * @param options.serviceDirectory 服务目录 default: services
  * @returns 
  */
 export function makeInjectionCode(options: ZilleVitePluginCodeOptions = {}) {
@@ -19,9 +23,12 @@ export function makeInjectionCode(options: ZilleVitePluginCodeOptions = {}) {
     directory = 'controllers',
     controllerSuffix = '.controller.tsx',
     controllerMetaSuffix = '.meta.ts',
+    service = false,
+    serviceDirectory = 'services',
   } = options;
 
   const eagerValue = (!!eager).toString();
+  const serviceCode = service ? makeServiceCode(serviceDirectory) : '';
 
   return `import { addRoute, setWindowEager, setWindowBaseURL, addControllerMetadata } from '@zille/react';
 const controllers = import.meta.glob('./${directory}/**/*${controllerSuffix}', {
@@ -43,5 +50,18 @@ Object.entries(metas).forEach(([path, meta]) => {
   addControllerMetadata(meta, new meta(route));
 });
 setWindowEager(${eagerValue});
-setWindowBaseURL(import.meta.env.BASE_URL);`
+setWindowBaseURL(import.meta.env.BASE_URL);${serviceCode}`
+}
+
+function makeServiceCode(directory: string) {
+  return `\nimport { service } from '@zille/request';
+const services = import.meta.glob('./${directory}/**/*.service.ts', {
+  eager: true,
+  import: 'default',
+});
+Object.entries(controllers).forEach(([path, fn]) => {
+  const sp = path.split('/');
+  const name = sp[sp.length - 1].slice(0, '.service.ts'.length * -1);
+  service[name] = new fn();
+});`
 }
