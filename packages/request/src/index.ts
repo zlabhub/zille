@@ -55,8 +55,13 @@ export function useAbortableRequest<T>(fn: (signal: AbortSignal) => Promise<T>, 
   const controller = useRef<AbortController>(null);
   const res = useRequest(() => {
     controller.current = new AbortController();
-    return fn(controller.current.signal)
-      .finally(() => controller.current = null);
+    return fn(controller.current.signal).then((data) => {
+      controller.current = null;
+      return data;
+    }).catch(e => {
+      controller.current = null;
+      return Promise.reject(e);
+    });
   }, refreshDeps);
   useEffect(() => () => controller.current?.abort(), []);
   return {
@@ -69,8 +74,13 @@ export function useAbortableIntersectionRequest<T>(fn: (signal: AbortSignal) => 
   const controller = useRef<AbortController>(null);
   const res = useIntersectionRequest(() => {
     controller.current = new AbortController();
-    return fn(controller.current.signal)
-      .finally(() => controller.current = null);
+    return fn(controller.current.signal).then((data) => {
+      controller.current = null;
+      return data;
+    }).catch(e => {
+      controller.current = null;
+      return Promise.reject(e);
+    });
   }, refreshDeps);
   useEffect(() => () => controller.current?.abort(), []);
   return {
