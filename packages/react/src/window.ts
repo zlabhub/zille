@@ -3,7 +3,7 @@ import { LocationProps, LocationRecord } from "./types"
 import { parse } from 'qs';
 import { Controller, ControllerMetadata } from "./controller";
 import { Meta } from "./meta";
-import { MIDDLEWARE, POPSTATE, _middleware, _render, Newable, WindowContextProps } from './types';
+import { POPSTATE, _middleware, _render, Newable, WindowContextProps } from './types';
 import { createRouter, addRoute as addRouter, findRoute, removeRoute } from 'rou3';
 import {
   createContext,
@@ -29,8 +29,6 @@ const WindowContext: WindowContextProps = {
   event: mitt(),
   controllerMetadatas: new Map(),
   routes: new Set(),
-  globalMiddlewares: [],
-  routerMiddlewares: [],
   controllerMiddlewares: new Map(),
   controllerCaches: new Map(),
   router: createRouter(),
@@ -127,18 +125,6 @@ export function getControllerMetadataByExpression<T extends ControllerMetadata =
   }
 }
 
-// 添加中间件
-export function addMiddleware<P>(type: MIDDLEWARE, middleware: FC<P>) {
-  switch (type) {
-    case MIDDLEWARE.GLOBAL:
-      WindowContext.globalMiddlewares.push(middleware);
-      break;
-    case MIDDLEWARE.ROUTER:
-      WindowContext.routerMiddlewares.push(middleware);
-      break;
-  }
-}
-
 // 添加路由
 export function addRoute(path: string, fn: (() => Promise<unknown>) | unknown) {
   addRouter(WindowContext.router, 'GET', path, {
@@ -156,6 +142,8 @@ export function addRoute(path: string, fn: (() => Promise<unknown>) | unknown) {
 // 窗口提供者
 export function WindowProvider(props: PropsWithChildren<{
   fallback?: ReactNode,
+  globalMiddlewares?: FC[],
+  routerMiddlewares?: FC[],
 }>) {
   const [isPending, startTransition] = useTransition();
   const [pathname, setPathname] = useState(WindowContext.defaultLocation.pathname);
@@ -232,8 +220,8 @@ export function WindowProvider(props: PropsWithChildren<{
         const component = WindowContext.controllerCaches.get(expression)!;
         const middlewares = WindowContext.controllerMiddlewares.get(expression) ?? [];
         _middlewares = [
-          ...WindowContext.globalMiddlewares,
-          ...WindowContext.routerMiddlewares,
+          ...(props.globalMiddlewares ?? []),
+          ...(props.routerMiddlewares ?? []),
           ...middlewares,
         ].map(component => ({ component, props: {} }));
         // @ts-ignore
@@ -244,7 +232,9 @@ export function WindowProvider(props: PropsWithChildren<{
         _middlewares = _middlewares.reverse();
         _node = null;
       } else {
-        _middlewares = [...WindowContext.globalMiddlewares].map(component => ({ component, props: {} })).reverse();
+        _middlewares = [
+          ...(props.globalMiddlewares ?? []),
+        ].map(component => ({ component, props: {} })).reverse();
         _node = props.children;
       }
 

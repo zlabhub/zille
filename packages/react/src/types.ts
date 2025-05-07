@@ -11,11 +11,6 @@ export enum POPSTATE {
   REPLACE,
 }
 
-export enum MIDDLEWARE {
-  GLOBAL,
-  ROUTER,
-}
-
 export type LocationRecord<T extends string> = Record<T, string | string[]>
 
 export interface LocationProps<P extends string = never, Q extends string = never> {
@@ -40,11 +35,21 @@ export interface WindowContextProps {
   router: RouterContext<{ payload: (() => Promise<{ new(): Controller }>) | { new(): Controller }, expression: string }>,
   event: Emitter<{ location: undefined }>,
   defaultLocation: LocationProps<string, string>,
-  globalMiddlewares: FC<any>[],
-  routerMiddlewares: FC<any>[],
-  controllerMiddlewares: Map<string, FC<any>[]>,
-  controllerCaches: Map<string, FC<any>>,
   routes: Set<() => void>,
+
+  // metaid -> middlewares
+  // 通过metaid获取控制器中间件集合
+  controllerMiddlewares: Map<string, FC<any>[]>,
+
+  // metaid -> controller:FC
+  // 通过metaid获取控制器编译后的组件对象
+  controllerCaches: Map<string, FC<any>>,
+
+  // class -> metadata
+  // 通过控制器类获取控制器信息元数据
   controllerMetadatas: Map<Newable, ControllerMetadata<any, any>>,
+
+  // metaid -> class
+  // 通过metaid获取控制器的构造器
   controllerMaps: Map<string, Newable>,
 }
