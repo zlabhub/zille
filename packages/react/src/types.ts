@@ -46,4 +46,5 @@ export interface WindowContextProps {
   controllerCaches: Map<string, FC<any>>,
   routes: Set<() => void>,
   controllerMetadatas: Map<Newable, ControllerMetadata<any, any>>,
+  controllerMaps: Map<string, Newable>,
 }

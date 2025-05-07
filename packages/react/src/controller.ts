@@ -39,6 +39,7 @@ export abstract class Controller<P extends string = never, Q extends string = ne
 class LocationMetadata<P extends string = never, Q extends string = never> {
   private _params: Partial<LocationRecord<P>> = {};
   private _query: Partial<LocationRecord<Q>> = {};
+  private _hash: string | undefined;
   constructor(private readonly meta: ControllerMetadata<P, Q>) { }
   public params(data: Partial<LocationRecord<P>>) {
     this._params = data;
@@ -50,10 +51,15 @@ class LocationMetadata<P extends string = never, Q extends string = never> {
     return this;
   }
 
+  public hash(data: string) {
+    this._hash = data;
+    return this;
+  }
+
   public toString() {
     const _path = this.meta._toPath(this._params as Record<P, string>);
     const _query = stringify(this._query);
-    return _path + (_query ? `?${_query}` : '');
+    return _path + (_query ? `?${_query}` : '') + (this._hash ? `#${this._hash}` : '');
   }
 }
 
@@ -65,7 +71,7 @@ export class ControllerMetadata<P extends string = never, Q extends string = nev
     this._toMatch = match(metaId);
   }
 
-  public create() {
+  public location() {
     return new LocationMetadata<P, Q>(this);
   }
 

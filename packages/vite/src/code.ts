@@ -9,7 +9,8 @@ export interface ZilleVitePluginCodeOptions {
  * @param options 
  * @param options.eager 是否急加载 default: false
  * @param options.directory 目录 default: controllers
- * @param options.suffix 后缀 default: .controller.tsx
+ * @param options.controllerSuffix 控制器后缀 default: .controller.tsx
+ * @param options.controllerMetaSuffix 控制器元数据后缀 default: .meta.ts
  * @returns 
  */
 export function makeInjectionCode(options: ZilleVitePluginCodeOptions = {}) {

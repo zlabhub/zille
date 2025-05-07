@@ -34,6 +34,7 @@ const WindowContext: WindowContextProps = {
   controllerMiddlewares: new Map(),
   controllerCaches: new Map(),
   router: createRouter(),
+  controllerMaps: new Map(),
   defaultLocation: {
     pathname: '/',
     query: getWindowLocationQuery(),
@@ -42,6 +43,7 @@ const WindowContext: WindowContextProps = {
   }
 }
 
+// 窗口上下文提供者
 const WindowContextProvider = createContext<LocationProps<string, string> & {
   redirect: (url?: string, type?: POPSTATE) => void,
   useEffect: typeof useEffect,
@@ -53,6 +55,7 @@ const WindowContextProvider = createContext<LocationProps<string, string> & {
   metaId: null,
 });
 
+// 获取窗口路径
 function getWindowLocationPathname() {
   let pathname = window.location.pathname;
   if (!pathname.startsWith(WindowContext.baseURL)) {
@@ -65,16 +68,19 @@ function getWindowLocationPathname() {
   return pathname;
 }
 
+// 获取窗口哈希
 function getWindowLocationHash() {
   return window.location.hash;
 }
 
+// 获取窗口查询
 function getWindowLocationQuery() {
   return parse(window.location.search, {
     ignoreQueryPrefix: true,
   }) as Partial<LocationRecord<string>>;
 }
 
+// 设置窗口基础 URL
 export function setWindowBaseURL(baseURL: string = '/') {
   if (!baseURL || !baseURL.endsWith('/')) {
     throw new Error('baseURL must be a valid URL and end with a slash');
@@ -82,22 +88,28 @@ export function setWindowBaseURL(baseURL: string = '/') {
   WindowContext.baseURL = baseURL;
 }
 
+// 设置窗口急加载
 export function setWindowEager(eager: boolean) {
   WindowContext.eager = eager;
 }
 
+// 获取窗口急加载
 export function getWindowEager() {
   return WindowContext.eager;
 }
 
+// 获取窗口提供者
 export function useLocation() {
   return useContext(WindowContextProvider);
 }
 
+// 添加控制器元数据
 export function addControllerMetadata<T extends ControllerMetadata>(clazz: Newable<T>, data: T) {
   WindowContext.controllerMetadatas.set(clazz, data);
+  WindowContext.controllerMaps.set(data.metaId, clazz);
 }
 
+// 通过控制器类获取控制器元数据
 export function getControllerMetadata<
   P extends string,
   Q extends string,
@@ -108,6 +120,14 @@ export function getControllerMetadata<
   }
 }
 
+// 通过表达式获取控制器元数据
+export function getControllerMetadataByExpression<T extends ControllerMetadata = any>(expression: string): Newable<T> | undefined {
+  if (WindowContext.controllerMaps.has(expression)) {
+    return WindowContext.controllerMaps.get(expression)! as Newable<T>;
+  }
+}
+
+// 添加中间件
 export function addMiddleware<P>(type: MIDDLEWARE, middleware: FC<P>) {
   switch (type) {
     case MIDDLEWARE.GLOBAL:
@@ -119,6 +139,7 @@ export function addMiddleware<P>(type: MIDDLEWARE, middleware: FC<P>) {
   }
 }
 
+// 添加路由
 export function addRoute(path: string, fn: (() => Promise<unknown>) | unknown) {
   addRouter(WindowContext.router, 'GET', path, {
     payload: fn,
@@ -132,13 +153,7 @@ export function addRoute(path: string, fn: (() => Promise<unknown>) | unknown) {
   return remove;
 }
 
-export function dispose() {
-  for (const remove of WindowContext.routes.values()) {
-    remove();
-  }
-  WindowContext.routes.clear();
-}
-
+// 窗口提供者
 export function WindowProvider(props: PropsWithChildren<{
   fallback?: ReactNode,
 }>) {
