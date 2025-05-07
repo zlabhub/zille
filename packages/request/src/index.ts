@@ -12,7 +12,7 @@ import {
   createContext,
   Dispatch,
   SetStateAction,
-  useContext
+  useContext,
 } from 'react';
 
 export * from './exception';
@@ -41,13 +41,42 @@ export function useRequest<T>(fn: () => Promise<T>, refreshDeps: DependencyList 
   const [data, setData] = useState<T | null>();
   const [error, setError] = useState<any>();
   const { submit, loading } = useSubmit(fn);
-  useEffect(() => {
+  const refresh = useCallback(() => {
     submit().then(setData).catch(e => {
       post(e);
       setError(e);
     });
+  }, [submit, setData, setError, post]);
+  useEffect(refresh, refreshDeps);
+  return { loading, data, error, setData, setError, refresh };
+}
+
+export function useAbortableRequest<T>(fn: (signal: AbortSignal) => Promise<T>, refreshDeps: DependencyList = []) {
+  const controller = useRef<AbortController>(null);
+  const res = useRequest(() => {
+    controller.current = new AbortController();
+    return fn(controller.current.signal)
+      .finally(() => controller.current = null);
   }, refreshDeps);
-  return { loading, data, error, setData, setError };
+  useEffect(() => () => controller.current?.abort(), []);
+  return {
+    ...res,
+    controller: controller.current,
+  }
+}
+
+export function useAbortableIntersectionRequest<T>(fn: (signal: AbortSignal) => Promise<T>, refreshDeps: DependencyList = []) {
+  const controller = useRef<AbortController>(null);
+  const res = useIntersectionRequest(() => {
+    controller.current = new AbortController();
+    return fn(controller.current.signal)
+      .finally(() => controller.current = null);
+  }, refreshDeps);
+  useEffect(() => () => controller.current?.abort(), []);
+  return {
+    ...res,
+    controller: controller.current,
+  }
 }
 
 export function useIntersectionRequest<T>(fn: () => Promise<T>, refreshDeps: DependencyList = []) {
@@ -65,7 +94,7 @@ export function useIntersectionRequest<T>(fn: () => Promise<T>, refreshDeps: Dep
         setError(e);
       })
       .finally(() => First.current = false)
-  }, [submit, setData, setError]);
+  }, [submit, setData, setError, post]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -98,6 +127,7 @@ export function useIntersectionRequest<T>(fn: () => Promise<T>, refreshDeps: Dep
   return {
     loading,
     data, error, setData, setError,
+    refresh: _submit,
     ref: componentRef,
   }
 }

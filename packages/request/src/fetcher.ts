@@ -5,6 +5,7 @@ export interface RequestFetcherOptions {
   method: 'get' | 'post' | 'put' | 'delete';
   data?: any;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }
 
 export class Fetcher {
@@ -31,6 +32,7 @@ export class Fetcher {
     const configs: RequestInit = {
       method: options.method,
       headers: options.headers ?? {},
+      signal: options.signal,
     };
 
     switch (configs.method) {
@@ -55,37 +57,31 @@ export class Fetcher {
       ))
   }
 
-  public get<T = any>(url: string, headers?: Record<string, string>) {
+  public get<T = any>(options: Omit<RequestFetcherOptions, 'method' | 'data'>) {
     return this.request<T>({
-      url,
+      ...options,
       method: 'get',
-      headers,
     })
   }
 
-  public post<T = any>(url: string, data?: any, headers?: Record<string, string>) {
+  public post<T = any>(options: Omit<RequestFetcherOptions, 'method'>) {
     return this.request<T>({
-      url,
+      ...options,
       method: 'post',
-      data,
-      headers,
     })
   }
 
-  public put<T = any>(url: string, data?: any, headers?: Record<string, string>) {
+  public put<T = any>(options: Omit<RequestFetcherOptions, 'method'>) {
     return this.request<T>({
-      url,
+      ...options,
       method: 'put',
-      data,
-      headers,
     })
   }
 
-  public delete<T = any>(url: string, headers?: Record<string, string>) {
+  public delete<T = any>(options: Omit<RequestFetcherOptions, 'method' | 'data'>) {
     return this.request<T>({
-      url,
+      ...options,
       method: 'delete',
-      headers,
     })
   }
 }
