@@ -33,6 +33,7 @@ export class Fetcher {
       method: options.method,
       headers: options.headers ?? {},
       signal: options.signal,
+      credentials: 'include',
     };
 
     switch (configs.method) {
