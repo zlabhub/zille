@@ -1,4 +1,4 @@
-import { ReactNode, FC, useEffect } from "react";
+import { ReactNode, FC, useEffect, useMemo } from "react";
 import { Meta } from "./meta";
 import { useLocation } from "./window";
 import { POPSTATE, _middleware, _render, LocationRecord } from "./types";
@@ -20,6 +20,10 @@ export abstract class Controller<P extends string = never, Q extends string = ne
       const _value = value ?? [];
       return [..._value, ...middlewares];
     });
+  }
+
+  public useComponent(fn: Function) {
+    return useMemo(() => fn.bind(this), []);
   }
 
   public [_render]() {
