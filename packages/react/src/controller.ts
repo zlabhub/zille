@@ -22,7 +22,7 @@ export abstract class Controller<P extends string = never, Q extends string = ne
     });
   }
 
-  public useComponent<P, T extends FC<P>>(fn: T): T {
+  public useComponent<P = {}>(fn: FC<P>): FC<P> {
     return useMemo(() => fn.bind(this), []);
   }
 
